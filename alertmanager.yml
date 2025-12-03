@@ -1,0 +1,24 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'erada.alertmanager@gmail.com'
+  smtp_auth_username: 'erada.alertmanager@gmail.com'
+  smtp_auth_password: 'vqqj rqob zdko tlqk'
+  smtp_require_tls: true
+
+route:
+  receiver: 'email-alert'
+  group_by: ['alertname', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+
+receivers:
+  - name: 'email-alert'
+    email_configs:
+      - to: 'AMahmoud@Eradafinance.com'
+        send_resolved: true
+        html: '{{ template "email.default.html" . }}'
+        headers:
+          Subject: 'Erada Alert: {{ .GroupLabels.alertname }}'
+

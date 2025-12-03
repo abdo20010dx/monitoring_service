@@ -1,0 +1,177 @@
+global:
+  scrape_interval: 15s      # Default scrape interval for all jobs
+  scrape_timeout: 10s       # Timeout for scrape requests
+  evaluation_interval: 15s  # How often to evaluate alert rules
+  external_labels:
+    cluster: 'erada-production'
+    environment: 'production'
+    # Note: host.docker.internal is configured via extra_hosts in docker-compose.yml
+    # This allows Prometheus to access services running on the host machine
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load alert rules
+rule_files:
+  - '/etc/prometheus/alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Alertmanager
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  # Backend Services - Loans
+  - job_name: 'back-loans'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:40256']  # Access via host.docker.internal (configured in docker-compose.yml)
+        labels:
+          service: 'loans'
+          type: 'backend'
+          port: '40256'
+
+  # Backend Services - Transactions
+  - job_name: 'back-transactions'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:40254']
+        labels:
+          service: 'transactions'
+          type: 'backend'
+          port: '40254'
+
+  # Backend Services - Visit
+  - job_name: 'back-visit'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:30252']
+        labels:
+          service: 'visit'
+          type: 'backend'
+          port: '30252'
+
+  # Backend Services - SSO (b_sso)
+  - job_name: 'back-sso'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:4005']
+        labels:
+          service: 'sso'
+          type: 'backend'
+          port: '4005'
+
+  # Backend Services - Erada Customers (b_custom_portal)
+  - job_name: 'back-eradacustomers'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:4001']
+        labels:
+          service: 'eradacustomers'
+          type: 'backend'
+          port: '4001'
+
+  # Backend Services - Islamic Finance Platform
+  - job_name: 'b-islamic-finance-platform'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:1652']
+        labels:
+          service: 'islamic-finance'
+          type: 'backend'
+          port: '1652'
+
+  # Backend Services - Insurance
+  - job_name: 'back-insurance'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:1801']
+        labels:
+          service: 'insurance'
+          type: 'backend'
+          port: '1801'
+
+  # Backend Services - Penalties
+  - job_name: 'back-penalties'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:1802']
+        labels:
+          service: 'penalties'
+          type: 'backend'
+          port: '1802'
+
+  # Backend Services - Modify LO
+  - job_name: 'back-modify-lo'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:1803']
+        labels:
+          service: 'modify-lo'
+          type: 'backend'
+          port: '1803'
+
+  # Backend Services - Money Transfer (NestJS - b_money_trans)
+  # - job_name: 'b-money-trans'
+  #   scrape_interval: 15s
+  #   scrape_timeout: 10s
+  #   metrics_path: '/metrics'  # NestJS uses /metrics instead of /actuator/prometheus
+  #   static_configs:
+  #     - targets: ['host.docker.internal:3000']
+  #       labels:
+  #         service: 'money-trans'
+  #         type: 'backend'
+  #         framework: 'nestjs'
+  #         port: '3000'
+
+  # Health check endpoints (fallback if Prometheus metrics not available)
+  # This job monitors basic service availability via health endpoints
+  - job_name: 'service-health-checks'
+    scrape_interval: 30s  # Less frequent for health checks
+    scrape_timeout: 5s    # Shorter timeout for health checks
+    metrics_path: '/actuator/health'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:40256'  # Loans
+          - 'host.docker.internal:40254'  # Transactions
+          - 'host.docker.internal:30252'  # Visit
+          - 'host.docker.internal:4005'   # SSO
+          - 'host.docker.internal:4001'   # Erada Customers
+          - 'host.docker.internal:1652'  # Islamic Finance Platform
+          - 'host.docker.internal:1801'  # Insurance
+          - 'host.docker.internal:1802'  # Penalties
+          - 'host.docker.internal:1803'  # Modify LO
+          # - 'host.docker.internal:3000'  # Money Transfer (may need /health endpoint)
+        labels:
+          type: 'health-check'
+          # Note: Health checks use /actuator/health for Spring Boot services
+          # NestJS services may need /health endpoint instead
+
